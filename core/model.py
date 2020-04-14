@@ -42,7 +42,7 @@ def number_total(model):
 class PabsModel(Model):
     """Model your your pandemic"""
 
-    def __init__(self, num_agents=10, width=10, height=10, initial_outbreak_size=0.9, virus_spread_chance=0.4,
+    def __init__(self, num_agents=10, width=10, height=10, initial_outbreak_size=0.1, virus_spread_chance=0.4,
                  virus_check_frequency=0.4, recovery_chance=0.3, gain_resistance_chance=0.5, min_infection_duration=5,
                  death_chance=0.5,
                  movers=0.1):
