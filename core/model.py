@@ -181,6 +181,8 @@ class PabsAgent(Agent):
 
     def step(self):
         self.move()
+        # if self.state is State.RESISTANT and self.random.random()<0.2:
+        #     self.state = State.SUSCEPTIBLE
         if self.state is State.INFECTED:
             self.infected_eta += 1
             if self.try_to_survive():
