@@ -38,13 +38,12 @@ def number_total(model):
     return number_dead(model) + number_resistant(model) + number_infected(model)
 
 
-
 class PabsModel(Model):
     """Model your your pandemic"""
 
     def __init__(self, num_agents=10, width=10, height=10, initial_outbreak_size=0.1, virus_spread_chance=0.4,
                  virus_check_frequency=0.4, recovery_chance=0.3, gain_resistance_chance=0.5, min_infection_duration=5,
-                 death_chance=0.5,
+                 death_chance=0.5, resistance_duration=-1,
                  movers=0.1):
         self.agents = set()
         self.num_agents = num_agents
@@ -57,6 +56,7 @@ class PabsModel(Model):
         self.virus_check_frequency = virus_check_frequency
         self.recovery_chance = recovery_chance
         self.gain_resistance_chance = gain_resistance_chance
+        self.resistance_duration = resistance_duration
         self.movers = movers
         self.death_chance = death_chance
         self.datacollector = DataCollector({"Infected": number_infected,
@@ -68,17 +68,7 @@ class PabsModel(Model):
 
         # Create agents
         for i in range(self.num_agents):
-            rn = self.random.random()
-            if rn <= self.initial_outbreak_size:
-                a = PabsAgent(i, self, State.INFECTED, self.virus_spread_chance, self.virus_check_frequency,
-                              self.recovery_chance, self.gain_resistance_chance, min_infection_duration,
-                              self.death_chance,
-                              movable=False)
-            else:
-                a = PabsAgent(i, self, State.SUSCEPTIBLE, self.virus_spread_chance, self.virus_check_frequency,
-                              self.recovery_chance, self.gain_resistance_chance, min_infection_duration,
-                              self.death_chance,
-                              movable=False)
+            a = self.create_new_agent(i, min_infection_duration)
             mrn = self.random.random()
             if mrn < movers:
                 a.movable = True
@@ -97,6 +87,20 @@ class PabsModel(Model):
 
         self.running = True
         self.datacollector.collect(self)
+
+    def create_new_agent(self, i, min_infection_duration):
+        rn = self.random.random()
+        if rn <= self.initial_outbreak_size:
+            a = PabsAgent(i, self, State.INFECTED, self.virus_spread_chance, self.virus_check_frequency,
+                          self.recovery_chance, self.gain_resistance_chance, min_infection_duration,
+                          self.death_chance,
+                          movable=False)
+        else:
+            a = PabsAgent(i, self, State.SUSCEPTIBLE, self.virus_spread_chance, self.virus_check_frequency,
+                          self.recovery_chance, self.gain_resistance_chance, min_infection_duration,
+                          self.death_chance,
+                          movable=False)
+        return a
 
     def resistant_susceptible_ratio(self):
         try:
@@ -125,6 +129,7 @@ class PabsAgent(Agent):
                  movable=True):
         super().__init__(unique_id, model)
 
+        self.survive = True
         self.state = initial_state
 
         self.virus_spread_chance = virus_spread_chance
@@ -134,7 +139,9 @@ class PabsAgent(Agent):
         self.death_chance = death_chance
         self.movable = movable
         self.min_infection_duration = min_infection_duration
-        self.infected_eta = 0
+        rnd = round(self.random.random() * min_infection_duration)
+        self.infected_eta = min_infection_duration + rnd
+        self.resistance_eta = 0
 
     def move(self):
         if self.movable and self.state is not State.DEAD:
@@ -145,7 +152,8 @@ class PabsAgent(Agent):
             self.model.grid.move_agent(self, new_position)
 
     def try_to_survive(self):
-        if self.random.random() <= 0.5 and self.random.random() < self.death_chance:
+        # if self.random.random() <= 0.5 and self.random.random() < self.death_chance:
+        if not self.survive:
             self.state = State.DEAD
             return False
         return True
@@ -157,14 +165,20 @@ class PabsAgent(Agent):
         for a in susceptible_neighbors:
             if self.random.random() < self.virus_spread_chance:
                 a.state = State.INFECTED
+                mrn = self.random.random()
+                if mrn < self.death_chance:
+                    a.survive = False
 
     def try_gain_resistance(self):
         if self.random.random() < self.gain_resistance_chance:
             self.state = State.RESISTANT
+            # resistance not forever
+            if self.model.resistance_duration > -1:
+                self.resistance_eta = 0
 
     def try_remove_infection(self):
         # Try to remove
-        if self.infected_eta > self.min_infection_duration:
+        if self.infected_eta == 0 and self.survive:
             if self.random.random() < self.recovery_chance:
                 # Success
                 self.state = State.SUSCEPTIBLE
@@ -181,10 +195,13 @@ class PabsAgent(Agent):
 
     def step(self):
         self.move()
-        # if self.state is State.RESISTANT and self.random.random()<0.2:
-        #     self.state = State.SUSCEPTIBLE
+        # resistance not forever
+        if self.state is State.RESISTANT and self.model.resistance_duration > -1:  # and self.random.random() < 0.2:
+            self.resistance_eta += 1
+            if self.resistance_eta > self.model.resistance_duration:
+                self.state = State.SUSCEPTIBLE
         if self.state is State.INFECTED:
-            self.infected_eta += 1
+            if self.infected_eta > 0: self.infected_eta -= 1
             if self.try_to_survive():
                 self.try_to_infect_neighbors()
             self.try_check_situation()

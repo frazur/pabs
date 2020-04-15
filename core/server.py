@@ -64,7 +64,7 @@ class PabsTextElement(TextElement):
 
 model_params = {
     'num_agents': UserSettableParameter('slider', 'Number of agents', 1000, 10, 2500, 1,
-                                       description='Choose how many agents to include in the model'),
+                                        description='Choose how many agents to include in the model'),
     'width': 70,
     'height': 70,
     'initial_outbreak_size': UserSettableParameter('choice', 'Initial Outbreak Size', 0.01,
@@ -84,6 +84,8 @@ model_params = {
                                                     description='How many ticks min infection'),
     'death_chance': UserSettableParameter('slider', 'Death chance', 0.02, 0.0, 1.0, 0.01,
                                           description='Probability that an agent will die if infected'),
+    'resistance_duration': UserSettableParameter('slider', 'Resistance duration (ticks, -1 forever)', -1, -1, 100, 1,
+                                                 description='How many ticks resistance lasts (-1 is forever)'),
     'movers': UserSettableParameter('slider', 'People who can move around', 1.0, 0.0, 1.0, 0.1,
                                     description='Probability that an agent will move')
 }
