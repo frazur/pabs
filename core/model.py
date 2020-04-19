@@ -201,7 +201,8 @@ class PabsAgent(Agent):
             if self.resistance_eta > self.model.resistance_duration:
                 self.state = State.SUSCEPTIBLE
         if self.state is State.INFECTED:
-            if self.infected_eta > 0: self.infected_eta -= 1
+            if self.infected_eta > 0:
+                self.infected_eta -= 1
             if self.try_to_survive():
                 self.try_to_infect_neighbors()
             self.try_check_situation()
